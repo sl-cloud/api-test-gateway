@@ -1,0 +1,23 @@
+# Staging overlay: image-tag based, no bind mounts, no dev tooling.
+# Deployed via: docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --wait
+name: api-test-gateway
+
+services:
+  api:
+    build: !reset null
+    image: ghcr.io/sl-cloud/api-test-gateway:${IMAGE_TAG:-staging}
+    command: !reset null
+    volumes: !reset []
+    restart: unless-stopped
+
+  migrate:
+    image: ghcr.io/sl-cloud/api-test-gateway:${IMAGE_TAG:-staging}
+    command: ['node', 'dist/db/migrate.js']
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    restart: unless-stopped

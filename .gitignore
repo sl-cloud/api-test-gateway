@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env
+*.local
+.DS_Store
+
+# Editor/tooling metadata that must never live inside this repo.
+.claude/
+.agents/
+CLAUDE.md
+AGENTS.md
+skills-lock.json
+obsidian-vault/

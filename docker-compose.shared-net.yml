@@ -1,0 +1,19 @@
+# Optional override that attaches this stack to a pre-created external
+# network so the control-plane repo's runner can reach `gateway-api`
+# by service name in local cross-repo development.
+#
+# Usage:
+#   docker network create portfolio-dev   # once
+#   docker compose -f docker-compose.yml -f docker-compose.shared-net.yml up -d
+name: api-test-gateway
+
+services:
+  api:
+    networks:
+      - default
+      - portfolio-dev
+    container_name: gateway-api
+
+networks:
+  portfolio-dev:
+    external: true

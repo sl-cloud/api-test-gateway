@@ -1,0 +1,40 @@
+import Fastify, { type FastifyInstance } from 'fastify';
+import type { AppConfig } from './config/index.js';
+import { buildLoggerOptions } from './lib/logger.js';
+import { generateRequestId } from './lib/request-id.js';
+import { createDbPool, type DbPool } from './db/client.js';
+import { errorHandlerPlugin } from './plugins/error-handler.js';
+import { healthRoutes } from './modules/health/routes.js';
+
+export interface BuildAppOptions {
+  config: AppConfig;
+  /** Injectable for tests (e.g. a pool pointed at a test database). */
+  db?: DbPool;
+}
+
+export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
+  const { config } = options;
+
+  const app = Fastify({
+    logger: buildLoggerOptions(config),
+    genReqId: (req) => (req.headers['x-request-id'] as string | undefined) ?? generateRequestId(),
+    requestIdHeader: 'x-request-id',
+  });
+
+  app.decorate('appConfig', config);
+  app.decorate('db', options.db ?? createDbPool(config));
+
+  app.addHook('onSend', async (request, reply, payload) => {
+    reply.header('x-request-id', request.id);
+    return payload;
+  });
+
+  await app.register(errorHandlerPlugin);
+  await app.register(healthRoutes);
+
+  app.addHook('onClose', async (instance) => {
+    await instance.db.end();
+  });
+
+  return app;
+}
