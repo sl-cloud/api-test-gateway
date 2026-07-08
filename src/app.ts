@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import rateLimit from '@fastify/rate-limit';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import type { AppConfig } from './config/index.js';
 import { buildLoggerOptions } from './lib/logger.js';
 import { generateRequestId } from './lib/request-id.js';
@@ -6,6 +8,7 @@ import { createDbPool, type DbPool } from './db/client.js';
 import { errorHandlerPlugin } from './plugins/error-handler.js';
 import { authPlugin } from './plugins/auth.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { authRoutes } from './modules/auth/routes.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -25,6 +28,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   app.decorate('appConfig', config);
   app.decorate('db', options.db ?? createDbPool(config));
 
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
   app.addHook('onSend', async (request, reply, payload) => {
     reply.header('x-request-id', request.id);
     return payload;
@@ -32,6 +38,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   await app.register(errorHandlerPlugin);
   await app.register(authPlugin);
+  await app.register(rateLimit, { global: false });
+  await app.register(authRoutes);
   await app.register(healthRoutes);
 
   app.addHook('onClose', async (instance) => {
