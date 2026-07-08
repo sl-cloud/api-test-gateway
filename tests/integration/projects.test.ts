@@ -140,4 +140,70 @@ describe('projects endpoints', () => {
     });
     expect(res.statusCode).toBe(409);
   });
+
+  describe('archived project member management', () => {
+    // Registered once and reused by both tests below (rather than per-test)
+    // to stay within the auth endpoints' rate limit for this test file.
+    let owner: { token: string; userId: string };
+    let helper: { token: string; userId: string };
+
+    beforeAll(async () => {
+      owner = await registerAndLogin(app, `owner6-${Date.now()}@example.com`);
+      helper = await registerAndLogin(app, `helper6-${Date.now()}@example.com`);
+    });
+
+    it('adding a member to an archived project returns 409', async () => {
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/projects',
+        headers: { authorization: `Bearer ${owner.token}` },
+        payload: { name: 'Archive Before Add' },
+      });
+      const projectId = createRes.json<{ id: string }>().id;
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/archive`,
+        headers: { authorization: `Bearer ${owner.token}` },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: { authorization: `Bearer ${owner.token}` },
+        payload: { userId: helper.userId },
+      });
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('removing a member from an archived project returns 409', async () => {
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/projects',
+        headers: { authorization: `Bearer ${owner.token}` },
+        payload: { name: 'Archive Before Remove' },
+      });
+      const projectId = createRes.json<{ id: string }>().id;
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: { authorization: `Bearer ${owner.token}` },
+        payload: { userId: helper.userId },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/archive`,
+        headers: { authorization: `Bearer ${owner.token}` },
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/projects/${projectId}/members/${helper.userId}`,
+        headers: { authorization: `Bearer ${owner.token}` },
+      });
+      expect(res.statusCode).toBe(409);
+    });
+  });
 });
