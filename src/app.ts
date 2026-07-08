@@ -11,6 +11,7 @@ import { healthRoutes } from './modules/health/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { userRoutes } from './modules/users/routes.js';
 import { projectRoutes } from './modules/projects/routes.js';
+import { taskRoutes } from './modules/tasks/routes.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -44,6 +45,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(authRoutes);
   await app.register(userRoutes);
   await app.register(projectRoutes);
+  await app.register(taskRoutes);
   await app.register(healthRoutes);
 
   app.addHook('onClose', async (instance) => {
