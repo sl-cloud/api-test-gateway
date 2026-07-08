@@ -1,0 +1,125 @@
+name: Deploy staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (e.g. sha-<40-hex>). Used for rollback.'
+        required: true
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Resolve image tag
+        id: image
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve commit shas
+        id: shas
+        run: |
+          echo "commit_sha=${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$(git rev-parse HEAD~1 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.STAGING_HOST }}
+          username: ${{ vars.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ~/api-test-gateway
+            sed -i '/^IMAGE_TAG=/d' .env
+            echo "IMAGE_TAG=${{ steps.image.outputs.tag }}" >> .env
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml run --rm migrate
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --wait
+
+      - name: Health verify
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "${{ vars.STAGING_BASE_URL }}/health/ready"; then
+              echo "healthy"
+              exit 0
+            fi
+            echo "not ready yet, retrying in 6s ($i/10)"
+            sleep 6
+          done
+          echo "::error::staging never became healthy after deploy"
+          exit 1
+
+      - name: Notify control plane
+        if: always() && vars.CONTROL_PLANE_URL != ''
+        continue-on-error: true
+        env:
+          CP_WEBHOOK_SECRET: ${{ secrets.CP_WEBHOOK_SECRET }}
+          CONTROL_PLANE_URL: ${{ vars.CONTROL_PLANE_URL }}
+          COMMIT_SHA: ${{ steps.shas.outputs.commit_sha }}
+          BASE_SHA: ${{ steps.shas.outputs.base_sha }}
+          DEPLOYED_AT: ${{ github.event.repository.updated_at }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CP_WEBHOOK_SECRET:-}" ]; then
+            echo "CP_WEBHOOK_SECRET unset, skipping notify"
+            exit 0
+          fi
+
+          delivery_id="${{ github.run_id }}-${{ github.run_attempt }}"
+          timestamp="$(date +%s)"
+          ci_run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          deployed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          body=$(jq -nc \
+            --arg project "api-test-gateway" \
+            --arg event "deployment.completed" \
+            --arg repository "${{ github.repository }}" \
+            --arg branch "main" \
+            --arg commitSha "$COMMIT_SHA" \
+            --arg baseSha "$BASE_SHA" \
+            --arg environment "staging" \
+            --arg ciRunUrl "$ci_run_url" \
+            --arg deployedAt "$deployed_at" \
+            '{project:$project, event:$event, repository:$repository, branch:$branch, commitSha:$commitSha, baseSha:$baseSha, environment:$environment, ciRunUrl:$ciRunUrl, deployedAt:$deployedAt}')
+
+          signature="sha256=$(printf '%s.%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CP_WEBHOOK_SECRET" | sed 's/^.* //')"
+
+          for attempt in 1 2 3; do
+            status=$(curl -sS -o /tmp/notify-response.json -w '%{http_code}' \
+              -X POST "$CONTROL_PLANE_URL/api/v1/webhooks/github-ci" \
+              -H "Content-Type: application/json" \
+              -H "X-Portfolio-Event: deployment.completed" \
+              -H "X-Portfolio-Delivery: $delivery_id" \
+              -H "X-Portfolio-Timestamp: $timestamp" \
+              -H "X-Portfolio-Signature: $signature" \
+              -d "$body") || status="000"
+
+            echo "notify attempt $attempt: HTTP $status"
+            if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+
+          echo "::warning::control plane notify failed after 3 attempts (last status: $status) — deploy still succeeded"
+          exit 1

@@ -1,6 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyError } from 'fastify';
 import { AppError } from '../lib/errors.js';
+import { reportError, requestContextFromFastify } from '../lib/error-reporter.js';
 
 const PROBLEM_JSON = 'application/problem+json';
 
@@ -54,6 +55,8 @@ export const errorHandlerPlugin = fp(async function errorHandlerPlugin(
     }
 
     request.log.error({ err: error }, 'unhandled error');
+
+    reportError(error, requestContextFromFastify(request, 500), app.appConfig, request.log);
 
     return reply.status(500).type(PROBLEM_JSON).send({
       type: 'https://api-test-gateway/errors/internal_error',
