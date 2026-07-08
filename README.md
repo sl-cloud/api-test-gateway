@@ -158,12 +158,22 @@ The `Makefile` targets above are the supported way to run these; each wraps
 the equivalent `npm run <script>` executed inside the `api` container via
 `docker compose exec`. The underlying `package.json` scripts:
 
-| Command                                           | Does                          |
-| -------------------------------------------------- | ----------------------------- |
-| `npm run dev`                                       | Watch mode (`tsx watch`), used by the container's own start command |
-| `npm run build`                                     | Compile to `dist/`            |
-| `npm run lint` / `lint:fix`                         | ESLint                        |
-| `npm run format` / `format:check`                   | Prettier                      |
-| `npm run typecheck`                                 | `tsc --noEmit`                |
-| `npm run test` / `test:unit` / `test:integration`   | Vitest                        |
-| `npm run migrate`                                   | Apply Drizzle migrations      |
+| Command                                           | Does                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`                                     | Watch mode (`tsx watch`), used by the container's own start command |
+| `npm run build`                                   | Compile to `dist/`                                                  |
+| `npm run lint` / `lint:fix`                       | ESLint                                                              |
+| `npm run format` / `format:check`                 | Prettier                                                            |
+| `npm run typecheck`                               | `tsc --noEmit`                                                      |
+| `npm run test` / `test:unit` / `test:integration` | Vitest                                                              |
+| `npm run migrate`                                 | Apply Drizzle migrations                                            |
+
+## Deploying to staging
+
+CI builds and pushes an image to GHCR on every push to `main`, then a
+second workflow deploys it to a VPS over SSH, verifies `/health/ready`
+from outside the container, and attempts a signed notification to the
+companion platform (never blocking the deploy if that fails). Rolling
+back is redeploying an earlier immutable image tag. See
+[`docs/deploy-staging.md`](./docs/deploy-staging.md) for host setup and
+the required GitHub Actions configuration.
