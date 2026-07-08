@@ -21,3 +21,4 @@ services:
 
   db:
     restart: unless-stopped
+    ports: !reset []
