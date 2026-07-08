@@ -13,25 +13,25 @@ logs:
 	docker compose logs -f
 
 test:
-	npm test
+	docker compose exec api npm test
 
 test-unit:
-	npm run test:unit
+	docker compose exec api npm run test:unit
 
 test-integration:
-	npm run test:integration
+	docker compose exec api npm run test:integration
 
 migrate:
-	npm run migrate
+	docker compose exec api npm run migrate
 
 lint:
-	npm run lint
+	docker compose exec api npm run lint
 
 format:
-	npm run format
+	docker compose exec api npm run format
 
 typecheck:
-	npm run typecheck
+	docker compose exec api npm run typecheck
 
 reset:
 	docker compose down -v

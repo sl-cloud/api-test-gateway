@@ -103,25 +103,49 @@ opportunity for the companion platform to prove it can understand real
 code, reason about real risk, and generate real, runnable tests, which is
 the actual portfolio piece.
 
-## Status
+## Quick start (Docker)
 
-Current status: Fastify skeleton, health endpoints (`/health/live`,
-`/health/ready`), Zod-validated config, structured logging with request IDs,
-Docker Compose (api + Postgres, healthchecked), and a full CI pipeline
-(lint, format, typecheck, unit, integration, build).
-
-The TaskBoard domain (users/projects/tasks, auth, and the business rules
-described above) lands next, followed by staging deployment.
-
-## Quick start
+Everything runs in Docker: the API, Postgres, and all development tooling
+(lint, typecheck, tests). No local Node.js install or `npm install` on the
+host is required.
 
 ```bash
 cp .env.example .env      # fill in JWT_SECRET (openssl rand -base64 32)
-make up                   # docker compose up -d --wait
+make up                   # docker compose up -d --wait (builds api + db, waits for healthchecks)
 curl http://localhost:3000/health/ready
-make test
+```
+
+Equivalent plain Docker Compose commands, if you'd rather not use `make`:
+
+```bash
+docker compose up -d --wait   # build and start api + db, wait for healthchecks
+docker compose logs -f        # tail logs
+docker compose down           # stop and remove containers
+docker compose down -v        # also wipe the Postgres volume
+```
+
+Try the API once it's up:
+
+```bash
+curl -sf -X POST http://localhost:3000/api/v1/auth/register \
+  -H 'content-type: application/json' \
+  -d '{"email":"you@example.com","password":"a_valid_password","displayName":"You"}'
+```
+
+All development commands run inside the running `api` container via
+`docker compose exec`, so `make up` must be running first:
+
+```bash
+make test              # full suite (unit + integration, real Postgres)
+make test-unit
+make test-integration
+make lint
+make format
+make typecheck
+make migrate            # re-apply migrations explicitly (also runs automatically on container start)
 make logs
 make down
+make reset               # wipe the Postgres volume and start fresh
 ```
 
 If Docker runs on a different machine than your browser/terminal, set
@@ -130,12 +154,16 @@ If Docker runs on a different machine than your browser/terminal, set
 
 ## Scripts
 
-| Command                                           | Does                                                |
-| ------------------------------------------------- | --------------------------------------------------- |
-| `npm run dev`                                     | Watch mode (`tsx watch`)                            |
-| `npm run build`                                   | Compile to `dist/`                                  |
-| `npm run lint` / `lint:fix`                       | ESLint                                              |
-| `npm run format` / `format:check`                 | Prettier                                            |
-| `npm run typecheck`                               | `tsc --noEmit`                                      |
-| `npm run test` / `test:unit` / `test:integration` | Vitest                                              |
-| `npm run migrate`                                 | Apply Drizzle migrations (no-op until domain lands) |
+The `Makefile` targets above are the supported way to run these; each wraps
+the equivalent `npm run <script>` executed inside the `api` container via
+`docker compose exec`. The underlying `package.json` scripts:
+
+| Command                                           | Does                          |
+| -------------------------------------------------- | ----------------------------- |
+| `npm run dev`                                       | Watch mode (`tsx watch`), used by the container's own start command |
+| `npm run build`                                     | Compile to `dist/`            |
+| `npm run lint` / `lint:fix`                         | ESLint                        |
+| `npm run format` / `format:check`                   | Prettier                      |
+| `npm run typecheck`                                 | `tsc --noEmit`                |
+| `npm run test` / `test:unit` / `test:integration`   | Vitest                        |
+| `npm run migrate`                                   | Apply Drizzle migrations      |

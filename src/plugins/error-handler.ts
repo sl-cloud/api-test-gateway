@@ -35,6 +35,24 @@ export const errorHandlerPlugin = fp(async function errorHandlerPlugin(
       });
     }
 
+    if (
+      typeof fastifyErr.statusCode === 'number' &&
+      fastifyErr.statusCode >= 400 &&
+      fastifyErr.statusCode < 500
+    ) {
+      return reply
+        .status(fastifyErr.statusCode)
+        .type(PROBLEM_JSON)
+        .send({
+          type: `https://api-test-gateway/errors/${fastifyErr.code ?? 'request_error'}`,
+          title: fastifyErr.name,
+          status: fastifyErr.statusCode,
+          detail: fastifyErr.message,
+          code: fastifyErr.code ?? 'request_error',
+          instance: request.id,
+        });
+    }
+
     request.log.error({ err: error }, 'unhandled error');
 
     return reply.status(500).type(PROBLEM_JSON).send({
