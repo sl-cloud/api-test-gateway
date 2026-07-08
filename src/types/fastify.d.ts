@@ -1,10 +1,6 @@
 import type { AppConfig } from '../config/index.js';
 import type { DbPool } from '../db/client.js';
-
-export interface CurrentUser {
-  id: string;
-  role: 'admin' | 'member';
-}
+import type { CurrentUser } from './current-user.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
