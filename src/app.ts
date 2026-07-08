@@ -9,6 +9,7 @@ import { errorHandlerPlugin } from './plugins/error-handler.js';
 import { authPlugin } from './plugins/auth.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { userRoutes } from './modules/users/routes.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -40,6 +41,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(authPlugin);
   await app.register(rateLimit, { global: false });
   await app.register(authRoutes);
+  await app.register(userRoutes);
   await app.register(healthRoutes);
 
   app.addHook('onClose', async (instance) => {
