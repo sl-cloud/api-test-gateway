@@ -25,6 +25,26 @@ async function loadProjectForMutation(
   return { project, isMember: member };
 }
 
+// Loads the parent project for a task, masking a "project not found/not
+// viewable" error as "task not found" so a non-member cannot distinguish
+// "this task id does not exist" from "this task exists but its project is
+// not visible to you". 404, not 403: non-members must not learn the task
+// exists.
+async function loadProjectForTask(
+  db: Db,
+  currentUser: CurrentUser,
+  projectId: string,
+): Promise<{ project: Project; isMember: boolean }> {
+  try {
+    return await loadProjectForMutation(db, currentUser, projectId);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      throw new NotFoundError('task not found');
+    }
+    throw error;
+  }
+}
+
 export async function createTask(
   db: Db,
   currentUser: CurrentUser,
@@ -68,7 +88,7 @@ export async function getTask(db: Db, currentUser: CurrentUser, taskId: string):
   const task = await db.query.tasksTable.findFirst({ where: eq(tasksTable.id, taskId) });
   if (!task) throw new NotFoundError('task not found');
 
-  await loadProjectForMutation(db, currentUser, task.projectId);
+  await loadProjectForTask(db, currentUser, task.projectId);
   return task;
 }
 
@@ -99,7 +119,7 @@ export async function updateTask(
   const task = await db.query.tasksTable.findFirst({ where: eq(tasksTable.id, taskId) });
   if (!task) throw new NotFoundError('task not found');
 
-  const { project, isMember } = await loadProjectForMutation(db, currentUser, task.projectId);
+  const { project, isMember } = await loadProjectForTask(db, currentUser, task.projectId);
 
   if (!canCreateOrEditTask(currentUser, project, isMember)) {
     throw new ForbiddenError('only project members or the owner may edit tasks');
@@ -135,7 +155,7 @@ export async function deleteTask(db: Db, currentUser: CurrentUser, taskId: strin
   const task = await db.query.tasksTable.findFirst({ where: eq(tasksTable.id, taskId) });
   if (!task) throw new NotFoundError('task not found');
 
-  const { project } = await loadProjectForMutation(db, currentUser, task.projectId);
+  const { project } = await loadProjectForTask(db, currentUser, task.projectId);
 
   if (!canDeleteTask(currentUser, project)) {
     throw new ForbiddenError('only the owner or an admin may delete tasks');
