@@ -17,14 +17,17 @@ const admin = { id: 'admin-1', role: 'admin' as const };
 describe('canViewProject', () => {
   it('allows the owner', () => expect(canViewProject(owner, project, false)).toBe(true));
   it('allows a member', () => expect(canViewProject(member, project, true)).toBe(true));
-  it('allows an admin who is not a member', () => expect(canViewProject(admin, project, false)).toBe(true));
-  it('denies a non-member non-admin', () => expect(canViewProject(stranger, project, false)).toBe(false));
+  it('allows an admin who is not a member', () =>
+    expect(canViewProject(admin, project, false)).toBe(true));
+  it('denies a non-member non-admin', () =>
+    expect(canViewProject(stranger, project, false)).toBe(false));
 });
 
 describe('canManageProject', () => {
   it('allows the owner', () => expect(canManageProject(owner, project)).toBe(true));
   it('allows an admin', () => expect(canManageProject(admin, project)).toBe(true));
-  it('denies a member who is not the owner', () => expect(canManageProject(member, project)).toBe(false));
+  it('denies a member who is not the owner', () =>
+    expect(canManageProject(member, project)).toBe(false));
 });
 
 describe('canManageMembers', () => {
@@ -35,7 +38,8 @@ describe('canManageMembers', () => {
 describe('canCreateOrEditTask', () => {
   it('allows the owner', () => expect(canCreateOrEditTask(owner, project, false)).toBe(true));
   it('allows a member', () => expect(canCreateOrEditTask(member, project, true)).toBe(true));
-  it('denies a non-member', () => expect(canCreateOrEditTask(stranger, project, false)).toBe(false));
+  it('denies a non-member', () =>
+    expect(canCreateOrEditTask(stranger, project, false)).toBe(false));
 });
 
 describe('canDeleteTask', () => {
