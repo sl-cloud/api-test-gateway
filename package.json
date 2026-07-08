@@ -20,7 +20,8 @@
     "test:integration": "vitest run tests/integration",
     "test:watch": "vitest",
     "migrate": "tsx src/db/migrate.ts",
-    "migrate:generate": "drizzle-kit generate"
+    "migrate:generate": "drizzle-kit generate",
+    "seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@fastify/rate-limit": "^10.2.1",
