@@ -35,9 +35,11 @@ services:
 
   db:
     image: postgres:16-alpine
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: gateway
-      POSTGRES_PASSWORD: gateway_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gateway_dev_password}
       POSTGRES_DB: gateway
     ports:
       - '${DB_HOST_PORT:-5432}:5432'
