@@ -4,6 +4,7 @@ import { buildLoggerOptions } from './lib/logger.js';
 import { generateRequestId } from './lib/request-id.js';
 import { createDbPool, type DbPool } from './db/client.js';
 import { errorHandlerPlugin } from './plugins/error-handler.js';
+import { authPlugin } from './plugins/auth.js';
 import { healthRoutes } from './modules/health/routes.js';
 
 export interface BuildAppOptions {
@@ -30,6 +31,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
 
   await app.register(errorHandlerPlugin);
+  await app.register(authPlugin);
   await app.register(healthRoutes);
 
   app.addHook('onClose', async (instance) => {
