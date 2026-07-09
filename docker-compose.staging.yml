@@ -8,6 +8,7 @@ services:
     image: ghcr.io/sl-cloud/api-test-gateway:${IMAGE_TAG:-staging}
     command: !reset null
     volumes: !reset []
+    ports: !override ['127.0.0.1:${API_HOST_PORT:-3000}:3000']
     restart: unless-stopped
 
   migrate:
