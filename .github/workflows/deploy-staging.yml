@@ -50,11 +50,13 @@ jobs:
           script: |
             set -euo pipefail
             cd ~/api-test-gateway
+            git fetch origin main
+            git reset --hard ${{ steps.shas.outputs.commit_sha }}
             sed -i '/^IMAGE_TAG=/d' .env
             echo "IMAGE_TAG=${{ steps.image.outputs.tag }}" >> .env
             docker compose -f docker-compose.yml -f docker-compose.staging.yml pull
             docker compose -f docker-compose.yml -f docker-compose.staging.yml run --rm migrate
-            docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --wait
+            docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --wait api db
 
       - name: Health verify
         run: |
