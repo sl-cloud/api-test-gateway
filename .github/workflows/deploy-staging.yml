@@ -44,6 +44,7 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ vars.STAGING_HOST }}
+          port: ${{ vars.STAGING_PORT || 22 }}
           username: ${{ vars.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
