@@ -27,6 +27,7 @@ deploy_key -N ''`), install the public half in the deploy user's
    | Name                | Kind     | Value                                                       |
    | ------------------- | -------- | ----------------------------------------------------------- |
    | `STAGING_HOST`      | variable | the host's address                                          |
+   | `STAGING_PORT`      | variable | SSH port, only needed if not 22                             |
    | `STAGING_USER`      | variable | the deploy username                                         |
    | `STAGING_BASE_URL`  | variable | `https://<host>` (or `http://<host>:3000` without a domain) |
    | `CONTROL_PLANE_URL` | variable | the control plane's public base URL, once it exists         |
