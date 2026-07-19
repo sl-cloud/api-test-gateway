@@ -14,6 +14,45 @@ describe('auth endpoints', () => {
     await app.close();
   });
 
+  it('returns 401 before body validation when registration Basic Auth is configured', async () => {
+    const isolatedApp = await buildTestApp({
+      DOCS_USERNAME: 'docs-user',
+      DOCS_PASSWORD: 'docs-password',
+    });
+    await isolatedApp.ready();
+    try {
+      const res = await isolatedApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: { email: 'not-an-email' },
+      });
+      expect(res.statusCode).toBe(401);
+      expect(res.headers['www-authenticate']).toContain('Basic');
+    } finally {
+      await isolatedApp.close();
+    }
+  });
+
+  it('validates the body after registration Basic Auth succeeds', async () => {
+    const isolatedApp = await buildTestApp({
+      DOCS_USERNAME: 'docs-user',
+      DOCS_PASSWORD: 'docs-password',
+    });
+    await isolatedApp.ready();
+    try {
+      const credentials = Buffer.from('docs-user:docs-password').toString('base64');
+      const res = await isolatedApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        headers: { authorization: 'Basic ' + credentials },
+        payload: { email: 'not-an-email' },
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await isolatedApp.close();
+    }
+  });
+
   it('registers a new user as role member', async () => {
     const res = await app.inject({
       method: 'POST',
