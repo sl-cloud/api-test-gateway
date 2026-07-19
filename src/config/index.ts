@@ -12,6 +12,16 @@ const envSchema = z.object({
   ERROR_WEBHOOK_URL: z.string().url().optional(),
   ERROR_WEBHOOK_SECRET: z.string().min(16).optional(),
 
+  // Both must be set for /docs to register; unset means no docs route at all.
+  DOCS_USERNAME: z.string().min(1).optional(),
+  DOCS_PASSWORD: z.string().min(8).optional(),
+
+  // Set to false on staging/public deploys to close public self-registration.
+  REGISTRATION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+
   COMMIT_SHA: z.string().default('dev'),
 });
 

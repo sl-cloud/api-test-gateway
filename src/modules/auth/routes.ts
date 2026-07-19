@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { createDb } from '../../db/index.js';
+import { ForbiddenError } from '../../lib/errors.js';
 import { registerUser, loginUser, getCurrentUser } from './service.js';
 import {
   registerBodySchema,
@@ -20,6 +21,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     },
     async (request, reply) => {
+      if (!app.appConfig.REGISTRATION_ENABLED) {
+        throw new ForbiddenError('self-registration is disabled', 'registration_disabled');
+      }
       const user = await registerUser(db, request.body);
       return reply.status(201).send(user);
     },

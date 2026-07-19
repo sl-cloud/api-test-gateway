@@ -24,7 +24,10 @@
     "seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
+    "@fastify/basic-auth": "^6.2.0",
     "@fastify/rate-limit": "^10.2.1",
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^6.1.0",
     "argon2": "^0.41.1",
     "close-with-grace": "^2.1.0",
     "drizzle-orm": "^0.45.2",

@@ -7,6 +7,7 @@ import { generateRequestId } from './lib/request-id.js';
 import { createDbPool, type DbPool } from './db/client.js';
 import { errorHandlerPlugin } from './plugins/error-handler.js';
 import { authPlugin } from './plugins/auth.js';
+import { docsPlugin } from './plugins/docs.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { userRoutes } from './modules/users/routes.js';
@@ -41,6 +42,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   await app.register(errorHandlerPlugin);
   await app.register(authPlugin);
+  await app.register(docsPlugin);
   await app.register(rateLimit, { global: false });
   await app.register(authRoutes);
   await app.register(userRoutes);
