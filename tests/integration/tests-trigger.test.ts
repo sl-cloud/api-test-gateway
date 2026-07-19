@@ -20,7 +20,7 @@ async function registerAndLogin(app: FastifyInstance, email: string) {
 }
 
 async function registerAdminAndLogin(app: FastifyInstance, email: string) {
-  const token = await registerAndLogin(app, email);
+  await registerAndLogin(app, email);
   const db = createDb(app.db);
   await db.update(usersTable).set({ role: 'admin' }).where(eq(usersTable.email, email));
   return registerAndLogin(app, email); // re-login so the token/session reflects the new role

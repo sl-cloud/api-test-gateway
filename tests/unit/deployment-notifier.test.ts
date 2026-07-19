@@ -52,7 +52,7 @@ describe('notifyDeploymentCompleted', () => {
     expect(headers['X-Portfolio-Event']).toBe('deployment.completed');
     expect(headers['X-Portfolio-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
 
-    const body = JSON.parse(init.body as string);
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(body).toMatchObject({
       project: 'api-test-gateway',
       event: 'deployment.completed',
