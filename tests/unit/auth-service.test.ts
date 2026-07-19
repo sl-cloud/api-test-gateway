@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerUser, loginUser } from '../../src/modules/auth/service.js';
 import { ConflictError, UnauthorizedError } from '../../src/lib/errors.js';
 
-function fakeDb(existingUser: unknown = undefined) {
-  return {
-    query: { usersTable: { findFirst: vi.fn().mockResolvedValue(existingUser) } },
+function fakeDb(existingUser: unknown = undefined, existingUserCount = 1) {
+  const tx = {
+    execute: vi.fn().mockResolvedValue(undefined),
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue([{ count: existingUserCount }]),
+    }),
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([
@@ -12,7 +15,7 @@ function fakeDb(existingUser: unknown = undefined) {
             id: 'new-user-id',
             email: 'new@example.com',
             displayName: 'New User',
-            role: 'member',
+            role: existingUserCount === 0 ? 'admin' : 'member',
             isActive: true,
             passwordHash: 'hashed',
             createdAt: new Date(),
@@ -20,6 +23,10 @@ function fakeDb(existingUser: unknown = undefined) {
         ]),
       }),
     }),
+  };
+  return {
+    query: { usersTable: { findFirst: vi.fn().mockResolvedValue(existingUser) } },
+    transaction: vi.fn().mockImplementation((cb: (tx: unknown) => unknown) => cb(tx)),
   };
 }
 
@@ -33,7 +40,17 @@ describe('registerUser', () => {
     });
     expect(result.role).toBe('member');
     expect(result.email).toBe('new@example.com');
-    expect(db.insert).toHaveBeenCalled();
+    expect(db.transaction).toHaveBeenCalled();
+  });
+
+  it('makes the first-ever user an admin', async () => {
+    const db = fakeDb(undefined, 0);
+    const result = await registerUser(db as never, {
+      email: 'new@example.com',
+      password: 'a_valid_password',
+      displayName: 'New User',
+    });
+    expect(result.role).toBe('admin');
   });
 
   it('rejects registering an email that already exists', async () => {

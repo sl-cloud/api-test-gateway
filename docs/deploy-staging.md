@@ -33,6 +33,18 @@ deploy_key -N ''`), install the public half in the deploy user's
    | `CONTROL_PLANE_URL` | variable | the control plane's public base URL, once it exists         |
    | `STAGING_SSH_KEY`   | secret   | the deploy key's private half                               |
    | `CP_WEBHOOK_SECRET` | secret   | shared secret for the signed deploy-notification webhook    |
+   | `DOCS_USERNAME`     | secret   | HTTP Basic Auth username required to self-register          |
+   | `DOCS_PASSWORD`     | secret   | HTTP Basic Auth password required to self-register          |
+
+   `/docs` (the interactive Swagger UI) is always public. `DOCS_USERNAME`/
+   `DOCS_PASSWORD` are optional and serve a different purpose: when both are
+   set, `POST /api/v1/auth/register` additionally requires them as HTTP
+   Basic Auth credentials, so anonymous visitors can browse and try
+   read-only endpoints but can't create accounts without knowing them.
+   Leaving them unset makes registration open to anyone (still subject to
+   `REGISTRATION_ENABLED`). When set as GitHub Actions secrets, the deploy
+   workflow writes them into the remote `.env` on every deploy so you never
+   have to touch the host by hand to rotate them.
 
 ## What happens on every push to main
 

@@ -12,7 +12,10 @@ const envSchema = z.object({
   ERROR_WEBHOOK_URL: z.string().url().optional(),
   ERROR_WEBHOOK_SECRET: z.string().min(16).optional(),
 
-  // Both must be set for /docs to register; unset means no docs route at all.
+  // /docs is always public. When both are set, self-registration
+  // (POST /api/v1/auth/register) additionally requires them as HTTP Basic
+  // Auth credentials; unset means registration is open to anyone (subject
+  // to REGISTRATION_ENABLED).
   DOCS_USERNAME: z.string().min(1).optional(),
   DOCS_PASSWORD: z.string().min(8).optional(),
 

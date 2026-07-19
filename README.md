@@ -42,6 +42,8 @@ model packed into three entities (`User`, `Project`, `Task`):
 - **Authorization**: two layers, a system role (`admin` vs `member`) and
   per-project membership (owner vs member vs non-member), enforced through
   small, independently unit-tested policy functions rather than a framework.
+  The very first account ever registered becomes `admin` automatically;
+  everyone after that registers as a plain `member`.
 - **Ownership rules**: only a project's owner (or an admin) can archive it,
   delete it, or manage its members; non-members get `404`, not `403`, to
   avoid leaking that a resource exists.
@@ -167,6 +169,17 @@ the equivalent `npm run <script>` executed inside the `api` container via
 | `npm run typecheck`                               | `tsc --noEmit`                                                      |
 | `npm run test` / `test:unit` / `test:integration` | Vitest                                                              |
 | `npm run migrate`                                 | Apply Drizzle migrations                                            |
+
+## Interactive API docs
+
+`/docs` serves a Swagger UI generated from the same Zod schemas the routes
+are built with, so it's always accurate to what's actually deployed. It's
+public and read-only in the sense that matters: anyone can browse the API
+surface and try authenticated/read endpoints, but creating a new account
+(`POST /api/v1/auth/register`) is gated behind HTTP Basic Auth credentials
+on the staging deployment, so the public demo can't be used to spam
+accounts. See [`docs/deploy-staging.md`](./docs/deploy-staging.md) for how
+those credentials are configured.
 
 ## Deploying to staging
 
