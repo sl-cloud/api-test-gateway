@@ -15,16 +15,15 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run tests/unit && vitest run --config vitest.integration.config.ts",
     "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "migrate": "tsx src/db/migrate.ts",
     "migrate:generate": "drizzle-kit generate",
     "seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
-    "@fastify/basic-auth": "^6.2.0",
     "@fastify/rate-limit": "^10.2.1",
     "@fastify/swagger": "^9.8.1",
     "@fastify/swagger-ui": "^6.1.0",

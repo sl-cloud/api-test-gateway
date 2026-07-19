@@ -23,9 +23,22 @@ const TEST_DEFAULTS = {
  * Builds an app instance for integration tests, wired to a real database.
  * Requires the `db` compose service (or an equivalent reachable Postgres)
  * to already be running.
+ *
+ * `DOCS_USERNAME`/`DOCS_PASSWORD` are force-cleared unless explicitly passed
+ * in `overrides`: registration-gating is opt-in per test, but a developer's
+ * `.env` (loaded into the container's process.env by docker-compose) sets
+ * both, which would otherwise silently gate every test's registration calls.
  */
-export async function buildTestApp(): Promise<FastifyInstance> {
-  const config = loadConfig({ ...TEST_DEFAULTS, ...process.env });
+export async function buildTestApp(
+  overrides: Record<string, string | undefined> = {},
+): Promise<FastifyInstance> {
+  const config = loadConfig({
+    ...TEST_DEFAULTS,
+    ...process.env,
+    DOCS_USERNAME: undefined,
+    DOCS_PASSWORD: undefined,
+    ...overrides,
+  });
 
   return buildApp({ config });
 }

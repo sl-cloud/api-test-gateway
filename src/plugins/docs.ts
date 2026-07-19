@@ -1,29 +1,24 @@
-import { timingSafeEqual } from 'node:crypto';
 import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
-import fastifyBasicAuth from '@fastify/basic-auth';
 import { jsonSchemaTransform } from 'fastify-type-provider-zod';
 
-function safeCompare(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
-
 /**
- * Serves interactive API docs at /docs, gated by HTTP Basic Auth.
- * Only registers when DOCS_USERNAME and DOCS_PASSWORD are both set,
- * so it stays off by default rather than accidentally exposing routes.
+ * Serves interactive API docs at /docs, open to the public (read-only:
+ * self-registration is separately gated, see auth/routes.ts).
  */
 export const docsPlugin = fp(async function docsPlugin(app: FastifyInstance): Promise<void> {
-  const { DOCS_USERNAME, DOCS_PASSWORD } = app.appConfig;
-  if (!DOCS_USERNAME || !DOCS_PASSWORD) {
-    app.log.info('DOCS_USERNAME/DOCS_PASSWORD not set, skipping /docs registration');
-    return;
-  }
+  // Routes gate access via a requireAuth/requireAdmin preHandler rather than
+  // per-route `schema.security`; mirror that into the generated OpenAPI doc
+  // so Swagger UI's "Authorize" bearer token actually gets sent on them.
+  app.addHook('onRoute', (route) => {
+    const preHandlers = Array.isArray(route.preHandler) ? route.preHandler : [route.preHandler];
+    const isProtected = preHandlers.some((fn) => fn === app.requireAuth || fn === app.requireAdmin);
+    if (isProtected) {
+      route.schema = { ...route.schema, security: [{ bearerAuth: [] }] };
+    }
+  });
 
   await app.register(fastifySwagger, {
     openapi: {
@@ -41,20 +36,5 @@ export const docsPlugin = fp(async function docsPlugin(app: FastifyInstance): Pr
     transform: jsonSchemaTransform,
   });
 
-  await app.register(fastifyBasicAuth, {
-    validate: async (username, password, _req, reply) => {
-      const userOk = safeCompare(username, DOCS_USERNAME);
-      const passOk = safeCompare(password, DOCS_PASSWORD);
-      if (!userOk || !passOk) {
-        reply.header('WWW-Authenticate', 'Basic realm="docs"');
-        throw new Error('invalid docs credentials');
-      }
-    },
-    authenticate: { realm: 'docs' },
-  });
-
-  await app.register(async (scope) => {
-    scope.addHook('onRequest', scope.basicAuth);
-    await scope.register(fastifySwaggerUi, { routePrefix: '/docs' });
-  });
+  await app.register(fastifySwaggerUi, { routePrefix: '/docs' });
 });

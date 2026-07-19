@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db/index.js';
 import type { AppConfig } from '../../config/index.js';
 import { usersTable } from '../../db/schema.js';
@@ -23,15 +23,24 @@ export async function registerUser(db: Db, input: RegisterBody): Promise<PublicU
   }
 
   const passwordHash = await hashPassword(input.password);
-  const [created] = await db
-    .insert(usersTable)
-    .values({
-      email: input.email,
-      passwordHash,
-      displayName: input.displayName,
-      role: 'member',
-    })
-    .returning();
+
+  const created = await db.transaction(async (tx) => {
+    // Serializes concurrent registrations against each other so only one can
+    // ever observe count === 0; released automatically at transaction end.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('users_first_admin'))`);
+    const [countRow] = await tx.select({ count: sql<number>`count(*)::int` }).from(usersTable);
+    const count = countRow?.count ?? 0;
+    const [inserted] = await tx
+      .insert(usersTable)
+      .values({
+        email: input.email,
+        passwordHash,
+        displayName: input.displayName,
+        role: count === 0 ? 'admin' : 'member',
+      })
+      .returning();
+    return inserted;
+  });
 
   if (!created) {
     throw new Error('insert returned no row');

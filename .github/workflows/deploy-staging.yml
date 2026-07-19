@@ -47,6 +47,7 @@ jobs:
           port: ${{ vars.STAGING_PORT || 22 }}
           username: ${{ vars.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: DOCS_USERNAME,DOCS_PASSWORD
           script: |
             set -euo pipefail
             cd ~/api-test-gateway
@@ -54,9 +55,17 @@ jobs:
             git reset --hard ${{ steps.shas.outputs.commit_sha }}
             sed -i '/^IMAGE_TAG=/d' .env
             echo "IMAGE_TAG=${{ steps.image.outputs.tag }}" >> .env
+            if [ -n "${DOCS_USERNAME:-}" ] && [ -n "${DOCS_PASSWORD:-}" ]; then
+              sed -i '/^DOCS_USERNAME=/d;/^DOCS_PASSWORD=/d' .env
+              echo "DOCS_USERNAME=${DOCS_USERNAME}" >> .env
+              echo "DOCS_PASSWORD=${DOCS_PASSWORD}" >> .env
+            fi
             docker compose -f docker-compose.yml -f docker-compose.staging.yml pull
             docker compose -f docker-compose.yml -f docker-compose.staging.yml run --rm migrate
             docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --wait api db
+        env:
+          DOCS_USERNAME: ${{ secrets.DOCS_USERNAME }}
+          DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
 
       - name: Health verify
         run: |
