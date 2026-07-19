@@ -10,6 +10,7 @@ const baseConfig: AppConfig = {
   LOG_LEVEL: 'silent',
   DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
   JWT_SECRET: 'a'.repeat(32),
+  REGISTRATION_ENABLED: true,
   COMMIT_SHA: 'test-sha',
 };
 
