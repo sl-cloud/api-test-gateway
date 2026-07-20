@@ -193,6 +193,36 @@ describe('tasks endpoints', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('filters tasks by priority', async () => {
+    const owner = await registerAndLogin(app, `t-owner9-${Date.now()}@example.com`);
+    const projectId = await createProject(app, owner.token, 'Priority Filter Project');
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/tasks`,
+      headers: { authorization: `Bearer ${owner.token}` },
+      payload: { title: 'Urgent task', priority: 'high' },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/tasks`,
+      headers: { authorization: `Bearer ${owner.token}` },
+      payload: { title: 'Someday task', priority: 'low' },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/projects/${projectId}/tasks?priority=high`,
+      headers: { authorization: `Bearer ${owner.token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const tasks = res.json<{ title: string; priority: string }[]>();
+    expect(tasks).toHaveLength(1);
+    const [task] = tasks;
+    expect(task?.priority).toBe('high');
+    expect(task?.title).toBe('Urgent task');
+  });
+
   it('masks a task in an invisible project as task-not-found, indistinguishable from a nonexistent task id (404)', async () => {
     // Uses its own app instance (rather than the shared `app`) so this
     // test's extra login calls don't push the shared instance's per-route

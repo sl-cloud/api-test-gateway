@@ -31,6 +31,7 @@ export type UpdateTaskBody = z.infer<typeof updateTaskBodySchema>;
 export const listTasksQuerySchema = z.object({
   status: statusEnum.optional(),
   assigneeId: z.string().uuid().optional(),
+  priority: priorityEnum.optional(),
 });
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>;
 

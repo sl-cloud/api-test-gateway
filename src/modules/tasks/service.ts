@@ -103,6 +103,7 @@ export async function listTasks(
   const conditions = [eq(tasksTable.projectId, projectId)];
   if (query.status) conditions.push(eq(tasksTable.status, query.status));
   if (query.assigneeId) conditions.push(eq(tasksTable.assigneeId, query.assigneeId));
+  if (query.priority) conditions.push(eq(tasksTable.priority, query.priority));
 
   return db
     .select()
